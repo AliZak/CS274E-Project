@@ -6,6 +6,8 @@ from PIL import Image
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+from webdriver_manager.firefox import GeckoDriverManager
+
 slice_transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
 def prepare_tensor(path):
     img = Image.open(path)
@@ -34,30 +36,31 @@ def prepare_tensor(path):
             slices.append(torch.stack(sprite))
     return slices 
 
-driver = webdriver.Firefox()
-driver.get("http://gaurav.munjal.us/Universal-LPC-Spritesheet-Character-Generator/")
+driver = webdriver.Firefox(executable_path=GeckoDriverManager().install())
+driver.get("https://sanderfrenken.github.io/Universal-LPC-Spritesheet-Character-Generator/")
 driver.maximize_window()
 
-bodies = ['light','dark','dark2','darkelf','darkelf2','tanned','tanned2']
-shirts = ['longsleeve_brown','longsleeve_teal','longsleeve_maroon','longsleeve_white']
-hairstyles = ['green','blue','pink','raven','white','dark_blonde']
-pants = ['magenta','red','teal','white','robe_skirt']
+bodies = ['male', 'female', 'teen', 'child', 'pregnant', 'muscular']
+shirts = ['Longsleeve_brown','Longsleeve_teal','Longsleeve_maroon','Longsleeve_white']
+hairstyles = ['green','blue','pink','raven','white','blonde']
+pants = ['black','blue','teal','sky','white']
 train = 0
 test = 0
 for id_body, body in enumerate(bodies):
-    driver.execute_script("return arguments[0].click();",driver.find_element_by_id('body-'+body))
+    driver.execute_script("return arguments[0].click();",driver.find_element_by_id('sex-'+body))
     time.sleep(0.5)
     for id_shirt, shirt in enumerate(shirts):
         driver.execute_script("return arguments[0].click();",driver.find_element_by_id('clothes-'+shirt))
         time.sleep(0.5)
         for id_pant, pant in enumerate(pants):
-            if pant=='robe_skirt':
-                driver.execute_script("return arguments[0].click();",driver.find_element_by_id('legs-'+pant))
-            else:
-                driver.execute_script("return arguments[0].click();",driver.find_element_by_id('legs-pants_'+pant))
+            driver.execute_script("return arguments[0].click();",driver.find_element_by_id('legs-Pants_'+pant))
+            # if pant=='robe_skirt':
+            #     driver.execute_script("return arguments[0].click();",driver.find_element_by_id('legs-'+pant))
+            # else:
+            #     driver.execute_script("return arguments[0].click();",driver.find_element_by_id('legs-pants_'+pant))
             time.sleep(0.5)
             for id_hair, hair in enumerate(hairstyles):
-                driver.execute_script("return arguments[0].click();",driver.find_element_by_id('hair-plain_'+hair))
+                driver.execute_script("return arguments[0].click();",driver.find_element_by_id('hair-Plain_'+hair))
                 time.sleep(0.5)
                 name = body+"_"+shirt+"_"+pant+"_"+hair
                 print("Creating character: "  + "'" + name)

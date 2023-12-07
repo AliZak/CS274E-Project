@@ -1,1 +1,3 @@
 *.model
+*.png
+dataset/lpc-dataset

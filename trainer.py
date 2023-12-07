@@ -8,6 +8,7 @@ import numpy as np
 from model import *
 from tqdm import *
 from dataset import *
+from classifier import *
 
 __all__ = ['loss_fn', 'Trainer']
 
@@ -47,7 +48,7 @@ class Trainer(object):
         self.model.to(device)
         self.learning_rate = learning_rate
         self.checkpoints = checkpoints
-        self.optimizer = optim.Adam(self.model.parameters(),self.learning_rate)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.samples = nsamples
         self.sample_path = sample_path
         self.recon_path = recon_path
@@ -160,11 +161,11 @@ class Trainer(object):
            self.model.train()
        print("Training is complete")
 
-sprite = Sprites('./dataset/lpc-dataset/train', 6767)
-sprite_test = Sprites('./dataset/lpc-dataset/test', 791)
+sprite = Sprites('./dataset/lpc-dataset/train', 5958)
+sprite_test = Sprites('./dataset/lpc-dataset/test', 522)
 batch_size = 25
 loader = torch.utils.data.DataLoader(sprite, batch_size=batch_size, shuffle=True, num_workers=4)
-device = torch.device('cuda:1')
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=device)
 test_f = torch.rand(1,256, device=device)
 test_f = test_f.unsqueeze(1).expand(1, 8, 256)

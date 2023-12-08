@@ -10,7 +10,31 @@ from tqdm import *
 from dataset import *
 from classifier import *
 
+
+import wandb
+
+# start a new wandb run to track this script
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="cs274Erun1",
+    
+    # track hyperparameters and run metadata
+    config={
+    "learning_rate": 0.002,
+    "architecture": "DisentangledVAE",
+    "dataset": "SPRITE",
+    "epochs": 200,
+    }
+)
+
+
+    
+    
+# [optional] finish the wandb run, necessary in notebooks
+
 __all__ = ['loss_fn', 'Trainer']
+
+
 
 
 def loss_fn(original_seq,recon_seq,f_mean,f_logvar,z_post_mean,z_post_logvar, z_prior_mean, z_prior_logvar):
@@ -56,8 +80,8 @@ class Trainer(object):
         self.test_f_expand = test_f_expand
         self.epoch_losses = []
 
-        self.image1 =torch.zeros(4) #torch.load(self.transfer_path + 'image1.sprite')['sprite']
-        self.image2 = torch.zeros(4) #torch.load(self.transfer_path + 'image2.sprite')['sprite']
+        self.image1 =torch.load(self.transfer_path + 'image1.sprite')['sprite']
+        self.image2 =torch.load(self.transfer_path + 'image2.sprite')['sprite']
         self.image1 = self.image1.to(device)
         self.image2 = self.image2.to(device)
         self.image1 = torch.unsqueeze(self.image1,0)
@@ -148,11 +172,12 @@ class Trainer(object):
            meanf = np.mean(kld_fs)
            meanz = np.mean(kld_zs)
            self.epoch_losses.append(meanloss)
+           wandb.log({"epoch":epoch+1,"AverageLoss": meanloss, "KLoff": meanf,"KLofz":meanz})
            print("Epoch {} : Average Loss: {} KL of f : {} KL of z : {}".format(epoch+1,meanloss, meanf, meanz))
            self.save_checkpoint(epoch)
            self.model.eval()
            self.sample_frames(epoch+1)
-           _,_,_,_,_,_,sample = self.test[int(torch.randint(0,len(self.test),(1,)).item())]
+           _,_,_,_,_,sample = self.test[int(torch.randint(0,len(self.test),(1,)).item())]
            sample = torch.unsqueeze(sample,0)
            sample = sample.to(self.device)
            self.sample_frames(epoch+1)
@@ -161,7 +186,7 @@ class Trainer(object):
            self.model.train()
        print("Training is complete")
 
-sprite = Sprites('./dataset/lpc-dataset/train', 5814)
+sprite = Sprites('./dataset/lpc-dataset/train', 5814) #5814 total
 sprite_test = Sprites('./dataset/lpc-dataset/test', 666)
 batch_size = 25
 print("DataLoading")
@@ -169,15 +194,16 @@ print("DataLoading")
 loader = torch.utils.data.DataLoader(sprite, batch_size=batch_size, shuffle=True)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("VAEMade")
-
+print(f"Device is {device}")
 vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=device)
 test_f = torch.rand(1,256, device=device)
 test_f = test_f.unsqueeze(1).expand(1, 8, 256)
 print("Trainer Made")
 
-trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=25, epochs=500, learning_rate=0.0002, device=device)
+trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=25, epochs=500, learning_rate=0.002, device=device)
 print("CHECKPOINTLoading")
 
 trainer.load_checkpoint()
 print("TRAINBEGIN")
 trainer.train_model()
+wandb.finish()

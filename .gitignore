@@ -1,4 +1,12 @@
 *.model
 *.png
-*sprite
+*.sprite
+*.pth
+*.log
+output.log
 dataset/lpc-dataset
+wandb
+wandb/run-20231208_115558-ocpyyexh/files/output.log
+model.pth
+wandb/run-20231208_115558-ocpyyexh/run-ocpyyexh.wandb
+wandb/run-20231208_115558-ocpyyexh/files/output.log

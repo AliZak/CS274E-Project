@@ -97,3 +97,4 @@ for id_body, body in enumerate(bodies):
                     torch.save(final_sprite, path)
  
 print("Dataset is Ready.Training Set Size : %d. Test Set Size : %d " % (train,test))
+#Test

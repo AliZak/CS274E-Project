@@ -56,8 +56,8 @@ class Trainer(object):
         self.test_f_expand = test_f_expand
         self.epoch_losses = []
 
-        self.image1 = torch.load(self.transfer_path + 'image1.sprite')['sprite']
-        self.image2 = torch.load(self.transfer_path + 'image2.sprite')['sprite']
+        self.image1 =torch.zeros(4) #torch.load(self.transfer_path + 'image1.sprite')['sprite']
+        self.image2 = torch.zeros(4) #torch.load(self.transfer_path + 'image2.sprite')['sprite']
         self.image1 = self.image1.to(device)
         self.image2 = self.image2.to(device)
         self.image1 = torch.unsqueeze(self.image1,0)
@@ -134,7 +134,7 @@ class Trainer(object):
            kld_zs = []
            print("Running Epoch : {}".format(epoch+1))
            for i,dataitem in tqdm(enumerate(self.trainloader,1)):
-               _,_,_,_,_,_,data = dataitem
+               _,_,_,_,_,data = dataitem
                data = data.to(self.device)
                self.optimizer.zero_grad()
                f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = self.model(data)
@@ -161,14 +161,23 @@ class Trainer(object):
            self.model.train()
        print("Training is complete")
 
-sprite = Sprites('./dataset/lpc-dataset/train', 5958)
-sprite_test = Sprites('./dataset/lpc-dataset/test', 522)
+sprite = Sprites('./dataset/lpc-dataset/train', 5814)
+sprite_test = Sprites('./dataset/lpc-dataset/test', 666)
 batch_size = 25
-loader = torch.utils.data.DataLoader(sprite, batch_size=batch_size, shuffle=True, num_workers=4)
+print("DataLoading")
+
+loader = torch.utils.data.DataLoader(sprite, batch_size=batch_size, shuffle=True)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print("VAEMade")
+
 vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=device)
 test_f = torch.rand(1,256, device=device)
 test_f = test_f.unsqueeze(1).expand(1, 8, 256)
+print("Trainer Made")
+
 trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=25, epochs=500, learning_rate=0.0002, device=device)
+print("CHECKPOINTLoading")
+
 trainer.load_checkpoint()
+print("TRAINBEGIN")
 trainer.train_model()

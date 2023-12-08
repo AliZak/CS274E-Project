@@ -1,7 +1,7 @@
 import base64
 import time
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import Select
 from PIL import Image
 import numpy as np

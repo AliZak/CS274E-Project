@@ -1,3 +1,4 @@
 *.model
 *.png
+*sprite
 dataset/lpc-dataset

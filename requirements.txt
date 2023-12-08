@@ -8,8 +8,6 @@ backcall==0.2.0
 beautifulsoup4==4.12.0
 bleach==6.0.0
 blinker==1.6.2
-certifi @ file:///croot/certifi_1690232220950/work/certifi
-cffi==1.15.1
 charset-normalizer==2.1.1
 click==8.1.3
 cmake==3.25.0
@@ -62,9 +60,6 @@ MarkupSafe==2.1.2
 matplotlib==3.7.1
 matplotlib-inline==0.1.6
 mistune==2.0.5
-mkl-fft==1.3.6
-mkl-random @ file:///work/mkl/mkl_random_1682950433854/work
-mkl-service==2.4.0
 mpmath==1.2.1
 nbclassic==0.5.3
 nbclient==0.7.2

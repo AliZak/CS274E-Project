@@ -200,7 +200,7 @@ test_f = torch.rand(1,256, device=device)
 test_f = test_f.unsqueeze(1).expand(1, 8, 256)
 print("Trainer Made")
 
-trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=25, epochs=500, learning_rate=0.002, device=device)
+trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=32, epochs=500, learning_rate=0.0002, device=device)
 print("CHECKPOINTLoading")
 
 trainer.load_checkpoint()

@@ -59,7 +59,7 @@ class Trainer(object):
     def __init__(self,model,train,test,trainloader,testloader, test_f_expand,
                  epochs=100,batch_size=64,learning_rate=0.001,nsamples=1,sample_path='./sample',
                  recon_path='./recon/', transfer_path = './transfer/', 
-                 checkpoints='model.pth', style1='image1.sprite', style2='image2.sprite', device=torch.device('cuda:0')):
+                 checkpoints='model.pth', style1='image1.sprite', style2='image2.sprite', device=torch.device('cuda')):
         self.trainloader = trainloader
         self.train = train
         self.test = test
@@ -186,24 +186,26 @@ class Trainer(object):
            self.model.train()
        print("Training is complete")
 
-sprite = Sprites('./dataset/lpc-dataset/train', 5814) #5814 total
-sprite_test = Sprites('./dataset/lpc-dataset/test', 666)
-batch_size = 25
-print("DataLoading")
+if __name__ == '__main__':
 
-loader = torch.utils.data.DataLoader(sprite, batch_size=batch_size, shuffle=True)
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print("VAEMade")
-print(f"Device is {device}")
-vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=device)
-test_f = torch.rand(1,256, device=device)
-test_f = test_f.unsqueeze(1).expand(1, 8, 256)
-print("Trainer Made")
+    sprite = Sprites('./dataset/lpc-dataset/train', 5814) #5814 total
+    sprite_test = Sprites('./dataset/lpc-dataset/test', 666)
+    batch_size = 25
+    print("DataLoading")
 
-trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=25, epochs=500, learning_rate=0.002, device=device)
-print("CHECKPOINTLoading")
+    loader = torch.utils.data.DataLoader(sprite, batch_size=batch_size, shuffle=True)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print("VAEMade")
+    print(f"Device is {device}")
+    vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=device)
+    test_f = torch.rand(1,256, device=device)
+    test_f = test_f.unsqueeze(1).expand(1, 8, 256)
+    print("Trainer Made")
 
-trainer.load_checkpoint()
-print("TRAINBEGIN")
-trainer.train_model()
-wandb.finish()
+    trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f,batch_size=25, epochs=500, learning_rate=0.002, device=device)
+    print("CHECKPOINTLoading")
+
+    trainer.load_checkpoint()
+    print("TRAINBEGIN")
+    trainer.train_model()
+    wandb.finish()

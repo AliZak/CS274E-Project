@@ -136,7 +136,7 @@ def train_classifier(model, optim, dataset, device, epochs, path, test, start=0)
         check_accuracy(model, test, device)
 
 def main():
-    device = torch.device('cuda:0')
+    device = torch.device('cuda')
     model = SpriteClassifier()
     model.to(device)
     optim = torch.optim.Adam(model.parameters(), lr=0.0003)

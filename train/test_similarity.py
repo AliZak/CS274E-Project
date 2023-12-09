@@ -1,7 +1,7 @@
 from disVAE import FullQDisentangledVAE
 import torch
 vae = FullQDisentangledVAE(frames=8, f_dim=64, z_dim=32, hidden_dim=512, conv_dim=1024)
-device = torch.device('cuda:0')
+device = torch.device('cuda')
 vae.to(device)
 checkpoint = torch.load('disentangled-vae.model')
 vae.load_state_dict(checkpoint['state_dict'])

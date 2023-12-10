@@ -52,14 +52,12 @@ def grasp(net, ratio, train_loader, device,
             for i, dataitem in tqdm(enumerate(train_loader, 1)):
                 _,_,_,_,_,data = dataitem
                 print(len(data))
-                print(f"Device is {DEVICE}....")
-                data.to(DEVICE)
 
-                print(f"data in ... {data.get_device()}")
                 #print(f"model in ... {net.get_device()}")
+                data=data.cuda()
                 
-                f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data.cuda())
-                loss, kld_f, kld_z = loss_fn(data.cuda(), recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
+                f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data)
+                loss, kld_f, kld_z = loss_fn(data, recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
                 
                 grad_w_p = autograd.grad(loss, weights, create_graph=True)
                 if grad_w is None:

@@ -159,7 +159,7 @@ class Trainer(object):
            meanf = np.mean(kld_fs)
            meanz = np.mean(kld_zs)
            self.epoch_losses.append(meanloss)
-           wandb.log({"epoch":epoch+1,"AverageLoss": meanloss, "KLoff": meanf,"KLofz":meanz})
+        #    wandb.log({"epoch":epoch+1,"AverageLoss": meanloss, "KLoff": meanf,"KLofz":meanz})
            print("Epoch {} : Average Loss: {} KL of f : {} KL of z : {}".format(epoch+1,meanloss, meanf, meanz))
            self.save_checkpoint(epoch)
            self.model.eval()

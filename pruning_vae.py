@@ -26,6 +26,7 @@ def grasp_batched(net, ratio, train_loader, device,
     
     net = copy.deepcopy(net)
     net.to(DEVICE)
+    net.train()
 
     net.zero_grad()
     
@@ -66,20 +67,27 @@ def grasp_batched(net, ratio, train_loader, device,
     print("GRAD_W done, moving on to GRAD_F")
     for  i, dataitem in tqdm(enumerate(train_loader, 1)):
         _,_,_,_,_,data = dataitem
-        grad_f = autograd.grad(loss, weights, create_graph=True)
         data=data.cuda()
         
-        f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data)
+        with torch.backends.cudnn.flags(enabled=False):
+            f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data)
         loss, kld_f, kld_z = loss_fn(data, recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
         
         grad_f = autograd.grad(loss, weights, create_graph=True)
-        z = 0
+        grad_accum=0
+        print("GRAD_F iter fin")
         count = 0
         for layer in net.modules():
             if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                z += (grad_w[count].data * grad_f[count]).sum()
+                grad_accum += (grad_f[count]).sum()
+                #print(f"count: {count}")
+                #grad_f2 = autograd.grad(grad_accum2, layer.weight, create_graph=False)
+                #if layer.weight.grad is None:
+                #    layer.weight.grad=grad_f2[0]
+                #else:
+                #    layer.weight.grad+=grad_f2[0]
                 count += 1
-        z.backward()
+        grad_accum.backward()
 
     grads = dict()
     old_modules = list(old_net.modules())
@@ -109,7 +117,8 @@ if __name__ == '__main__':
     config = init_config()
     logger, writer = init_logger(config)
 
-    sprite, sprite_test = Sprites('dataset/lpc-dataset/train', 5814), Sprites('dataset/lpc-dataset/test', 522)
+    #5814
+    sprite, sprite_test = Sprites('dataset/lpc-dataset/train',26 ), Sprites('dataset/lpc-dataset/test', 522)
     batch_size = 32
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'

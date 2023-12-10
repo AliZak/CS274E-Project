@@ -118,7 +118,7 @@ if __name__ == '__main__':
     logger, writer = init_logger(config)
 
     #5814
-    sprite, sprite_test = Sprites('dataset/lpc-dataset/train',26 ), Sprites('dataset/lpc-dataset/test', 522)
+    sprite, sprite_test = Sprites('dataset/lpc-dataset/train',1000 ), Sprites('dataset/lpc-dataset/test', 522)
     batch_size = 32
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -128,8 +128,8 @@ if __name__ == '__main__':
     #vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=DEVICE)
     vae = DisentangledVAE(f_dim=16, z_dim=2, step=16, factorised=True,device=DEVICE)
     vae.to(DEVICE)
-    test_f = torch.rand(1,256, device = DEVICE)
-    test_f = test_f.unsqueeze(1).expand(1, 8, 256)
+    test_f = torch.rand(1,16, device = DEVICE)
+    test_f = test_f.unsqueeze(1).expand(1, 8, 16)
     # TODO: Prune the VAE
     mask = None
     mb = ModelBase(None, None, None, model = vae)
@@ -206,6 +206,9 @@ if __name__ == '__main__':
         #            iteration=iteration,
         #            logger=logger)
     # TODO: Setup VAE Trainer
-        trainer = Trainer(mb.model, sprite, sprite_test, loader, None, test_f, batch_size=25, epochs=1, learning_rate=0.002, device=device)
-
+        trainer = Trainer(mb.model, sprite, sprite_test, loader, None, test_f, batch_size=25, epochs=100, learning_rate=0.002, device=device)
+        trainer.train_model()
     # TODO: Compare timing
+    
+    # Try to train and generate
+    

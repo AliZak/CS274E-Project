@@ -18,6 +18,93 @@ import torch.autograd as autograd
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def grasp_batched(net, ratio, train_loader, device,
+          num_iters=1, reinit=True):
+    eps = 1e-10
+    keep_ratio = 1-ratio
+    old_net = net
+    
+    net = copy.deepcopy(net)
+    net.to(DEVICE)
+
+    net.zero_grad()
+    
+    weights = []
+    
+    for layer in net.modules():
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+            if isinstance(layer, nn.Linear) and reinit:
+                nn.init.xavier_normal(layer.weight)
+            weights.append(layer.weight)
+    
+    net.to(DEVICE)
+    # targets_one = [] => Generative, no target
+
+    grad_w = None
+    for w in weights:
+        w.requires_grad_(True)
+    
+    print_once = False
+   
+    for i, dataitem in tqdm(enumerate(train_loader, 1)):
+        _,_,_,_,_,data = dataitem
+        print(len(data))
+        #print(torch.cuda.memory_summary(device=None, abbreviated=False))
+
+        #print(f"model in ... {net.get_device()}")
+        data=data.cuda()
+        
+        f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data)
+        loss, kld_f, kld_z = loss_fn(data, recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
+        
+        grad_w_p = autograd.grad(loss, weights, create_graph=False)
+        if grad_w is None:
+            grad_w = list(grad_w_p)
+        else:
+            for idx in range(len(grad_w)):
+                grad_w[idx] += grad_w_p[idx]
+    print("GRAD_W done, moving on to GRAD_F")
+    for  i, dataitem in tqdm(enumerate(train_loader, 1)):
+        _,_,_,_,_,data = dataitem
+        grad_f = autograd.grad(loss, weights, create_graph=True)
+        data=data.cuda()
+        
+        f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data)
+        loss, kld_f, kld_z = loss_fn(data, recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
+        
+        grad_f = autograd.grad(loss, weights, create_graph=True)
+        z = 0
+        count = 0
+        for layer in net.modules():
+            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                z += (grad_w[count].data * grad_f[count]).sum()
+                count += 1
+        z.backward()
+
+    grads = dict()
+    old_modules = list(old_net.modules())
+    for idx, layer in enumerate(net.modules()):
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+            grads[old_modules[idx]] = -layer.weight.data * layer.weight.grad  # -theta_q Hg
+    # Gather all scores in a single vector and normalise
+    all_scores = torch.cat([torch.flatten(x) for x in grads.values()])
+    norm_factor = torch.abs(torch.sum(all_scores)) + eps
+    print("** norm factor:", norm_factor)
+    all_scores.div_(norm_factor)
+
+    num_params_to_rm = int(len(all_scores) * (1-keep_ratio))
+    threshold, _ = torch.topk(all_scores, num_params_to_rm, sorted=True)
+    # import pdb; pdb.set_trace()
+    acceptable_score = threshold[-1]
+    print('** accept: ', acceptable_score)
+    keep_masks = dict()
+    for m, g in grads.items():
+        keep_masks[m] = ((g / norm_factor) <= acceptable_score).float()
+
+    print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks.values()])))
+
+    return keep_masks
+  
 
 def grasp(net, ratio, train_loader, device,
           num_iters=1, reinit=True):
@@ -52,6 +139,7 @@ def grasp(net, ratio, train_loader, device,
             for i, dataitem in tqdm(enumerate(train_loader, 1)):
                 _,_,_,_,_,data = dataitem
                 print(len(data))
+                #print(torch.cuda.memory_summary(device=None, abbreviated=False))
 
                 #print(f"model in ... {net.get_device()}")
                 data=data.cuda()
@@ -60,12 +148,14 @@ def grasp(net, ratio, train_loader, device,
                 loss, kld_f, kld_z = loss_fn(data, recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
                 
                 grad_w_p = autograd.grad(loss, weights, create_graph=True)
+                grad_w_p=[ten.to('cpu') for ten in grad_w_p]
                 if grad_w is None:
                     grad_w = list(grad_w_p)
                 else:
                     for idx in range(len(grad_w)):
-                        grad_w[idx] += grad_w_p[idx]
-        
+                        grad_w[idx] += grad_w_p[idx].to('cpu')
+                
+                del data
     grads = dict()
     old_modules = list(old_net.modules())
     for idx, layer in enumerate(net.modules()):
@@ -95,7 +185,7 @@ if __name__ == '__main__':
     logger, writer = init_logger(config)
 
     sprite, sprite_test = Sprites('dataset/lpc-dataset/train', 5814), Sprites('dataset/lpc-dataset/test', 522)
-    batch_size = 5
+    batch_size = 32
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     loader = torch.utils.data.DataLoader(sprite, batch_size, shuffle = True)
@@ -139,7 +229,7 @@ if __name__ == '__main__':
         mb.model.apply(weights_init)
         print("=> Applying weight initialization(%s)." % config.get('init_method', 'kaiming'))
         print("Iteration of: %d/%d" % (iteration, num_iterations))
-        masks = grasp(mb.model, ratio, loader, 'cuda')
+        masks = grasp_batched(mb.model, ratio, loader, 'cuda')
         iteration = 0
         print('=> Using GraSP')
         # ========== register mask ==================

@@ -16,6 +16,9 @@ import copy
 import torch.autograd as autograd
 
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def grasp(net, ratio, train_loader, device,
           num_iters=1, reinit=True):
     eps = 1e-10
@@ -23,6 +26,8 @@ def grasp(net, ratio, train_loader, device,
     old_net = net
     
     net = copy.deepcopy(net)
+    net.to(DEVICE)
+
     net.zero_grad()
     
     weights = []
@@ -33,6 +38,7 @@ def grasp(net, ratio, train_loader, device,
                 nn.init.xavier_normal(layer.weight)
             weights.append(layer.weight)
     
+    net.to(DEVICE)
     # targets_one = [] => Generative, no target
 
     grad_w = None
@@ -46,9 +52,14 @@ def grasp(net, ratio, train_loader, device,
             for i, dataitem in tqdm(enumerate(train_loader, 1)):
                 _,_,_,_,_,data = dataitem
                 print(len(data))
-                data.to(device)
-                f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data)
-                loss, kld_f, kld_z = loss_fn(data, recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
+                print(f"Device is {DEVICE}....")
+                data.to(DEVICE)
+
+                print(f"data in ... {data.get_device()}")
+                #print(f"model in ... {net.get_device()}")
+                
+                f_mean, f_logvar, f, z_post_mean, z_post_logvar, z, z_prior_mean, z_prior_logvar, recon_x = net.forward(data.cuda())
+                loss, kld_f, kld_z = loss_fn(data.cuda(), recon_x, f_mean, f_logvar, z_post_mean, z_post_logvar, z_prior_mean, z_prior_logvar)
                 
                 grad_w_p = autograd.grad(loss, weights, create_graph=True)
                 if grad_w is None:
@@ -87,12 +98,14 @@ if __name__ == '__main__':
 
     sprite, sprite_test = Sprites('dataset/lpc-dataset/train', 5814), Sprites('dataset/lpc-dataset/test', 522)
     batch_size = 5
-    loader = torch.utils.data.DataLoader(sprite, batch_size, shuffle = True)
+    
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    loader = torch.utils.data.DataLoader(sprite, batch_size, shuffle = True)
     print('Data Loading')
 
-    vae = DisentangledVAE()
-    test_f = torch.rand(1,256, device = device)
+    vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=DEVICE)
+    vae.to(DEVICE)
+    test_f = torch.rand(1,256, device = DEVICE)
     test_f = test_f.unsqueeze(1).expand(1, 8, 256)
     # TODO: Prune the VAE
     mask = None

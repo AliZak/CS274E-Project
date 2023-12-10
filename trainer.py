@@ -13,19 +13,6 @@ from classifier import *
 
 import wandb
 
-# start a new wandb run to track this script
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="cs274Erun1",
-    
-    # track hyperparameters and run metadata
-    config={
-    "learning_rate": 0.002,
-    "architecture": "DisentangledVAE",
-    "dataset": "SPRITE",
-    "epochs": 200,
-    }
-)
 
 
     
@@ -187,6 +174,20 @@ class Trainer(object):
        print("Training is complete")
 
 if __name__ == '__main__':
+
+    # start a new wandb run to track this script
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="cs274Erun1",
+        
+        # track hyperparameters and run metadata
+        config={
+        "learning_rate": 0.002,
+        "architecture": "DisentangledVAE",
+        "dataset": "SPRITE",
+        "epochs": 200,
+        }
+    )
 
     sprite = Sprites('./dataset/lpc-dataset/train', 5814) #5814 total
     sprite_test = Sprites('./dataset/lpc-dataset/test', 666)

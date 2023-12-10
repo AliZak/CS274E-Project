@@ -4,4 +4,6 @@
 *.pth
 *.log
 *wandb
+*.pyc
 GraSP/
+runs/pruning

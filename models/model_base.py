@@ -2,7 +2,7 @@ import torch.nn as nn
 from collections import OrderedDict
 from utils.network_utils import get_network
 from utils.prune_utils import filter_weights
-
+import torch
 
 class ModelBase(object):
 
@@ -93,6 +93,6 @@ class ModelBase(object):
         return self
 
     def cuda(self):
-        self.model = self.model.cuda()
+        self.model = self.model.to(torch.device('cuda'))
         return self
 

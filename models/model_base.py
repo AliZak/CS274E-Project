@@ -21,17 +21,16 @@ class ModelBase(object):
         total = 0
         remained = 0
         # for m in self.masks.keys():
-        for m in self.model.modules():
-            if isinstance(m, (nn.Linear, nn.Conv2d)):
-                mask = self.masks.get(m, None)
-                if mask is not None:
-                    res[m] = (mask.sum() / mask.numel()).item() * 100
-                    total += mask.numel()
-                    remained += mask.sum().item()
-                else:
-                    res[m] = -100.0
-                    total += m.weight.numel()
-                    remained += m.weight.numel()
+        for m in self.model.parameters():
+            mask = self.masks.get(m, None)
+            if mask is not None:
+                res[m] = (mask.sum() / mask.numel()).item() * 100
+                total += mask.numel()
+                remained += mask.sum().item()
+            else:
+                res[m] = -100.0
+                total += m.weight.numel()
+                remained += m.weight.numel()
         res['ratio'] = remained/total * 100
         return res
 
@@ -61,21 +60,22 @@ class ModelBase(object):
         if masks is not None:
             self.masks = masks
         assert self.masks is not None, 'Masks should be generated first.'
-        for m in self.masks.keys():
-            m.register_forward_pre_hook(self._forward_pre_hooks)
+        #for m in self.masks.keys():
+        #    m.register_forward_pre_hook(self._forward_pre_hooks)
 
     def unregister_mask(self):
-        for m in self.model.modules():
-            m._backward_hooks = OrderedDict()
-            m._forward_pre_hooks = OrderedDict()
+        pass
+        #for m in self.model.modules():
+        #    m._backward_hooks = OrderedDict()
+        #    m._forward_pre_hooks = OrderedDict()
 
     def _forward_pre_hooks(self, m, input):
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+        #if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
             # import pdb; pdb.set_trace()
-            mask = self.masks[m]
-            m.weight.data.mul_(mask)
-        else:
-            raise NotImplementedError('Unsupported ' + m)
+        mask = self.masks[m]
+        m.data.mul_(mask)
+        #else:
+        #    raise NotImplementedError('Unsupported ' + m)
 
     def get_name(self):
         return '%s_%s%s' % (self._dataset, self._network, self._depth)

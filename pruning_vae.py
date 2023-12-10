@@ -32,11 +32,10 @@ def grasp_batched(net, ratio, train_loader, device,
     
     weights = []
     
-    for layer in net.modules():
-        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-            if isinstance(layer, nn.Linear) and reinit:
-                nn.init.xavier_normal(layer.weight)
-            weights.append(layer.weight)
+    for p in net.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
+        weights.append(p)
     
     net.to(DEVICE)
     # targets_one = [] => Generative, no target
@@ -77,23 +76,24 @@ def grasp_batched(net, ratio, train_loader, device,
         grad_accum=0
         print("GRAD_F iter fin")
         count = 0
-        for layer in net.modules():
-            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                grad_accum += (grad_f[count]).sum()
-                #print(f"count: {count}")
-                #grad_f2 = autograd.grad(grad_accum2, layer.weight, create_graph=False)
-                #if layer.weight.grad is None:
-                #    layer.weight.grad=grad_f2[0]
-                #else:
-                #    layer.weight.grad+=grad_f2[0]
-                count += 1
+        for p in net.parameters():
+            grad_accum += (grad_w[count].data*grad_f[count]).sum()
+            #grad_accum.backward()
+            #print(f"count: {count}")
+            #grad_f2 = autograd.grad(grad_accum, p, create_graph=False)
+            #if p.grad is None:
+            #    p.grad=grad_f2[0]
+            #else:
+            #    p.grad+=grad_f2[0]
+            count += 1
+            #del grad_accum
         grad_accum.backward()
 
     grads = dict()
-    old_modules = list(old_net.modules())
-    for idx, layer in enumerate(net.modules()):
-        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-            grads[old_modules[idx]] = -layer.weight.data * layer.weight.grad  # -theta_q Hg
+    old_modules = list(old_net.parameters())
+    for idx, p in enumerate(net.parameters()):
+        
+        grads[old_modules[idx]] = -p.data * p.grad  # -theta_q Hg
     # Gather all scores in a single vector and normalise
     all_scores = torch.cat([torch.flatten(x) for x in grads.values()])
     norm_factor = torch.abs(torch.sum(all_scores)) + eps
@@ -125,7 +125,8 @@ if __name__ == '__main__':
     loader = torch.utils.data.DataLoader(sprite, batch_size, shuffle = True)
     print('Data Loading')
 
-    vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=DEVICE)
+    #vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=DEVICE)
+    vae = DisentangledVAE(f_dim=16, z_dim=2, step=16, factorised=True,device=DEVICE)
     vae.to(DEVICE)
     test_f = torch.rand(1,256, device = DEVICE)
     test_f = test_f.unsqueeze(1).expand(1, 8, 256)

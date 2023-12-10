@@ -69,7 +69,7 @@ def print_mask_information(mb, logger):
     for k, v in ratios.items():
         if k == 'ratio':
             continue
-        logger.info('  (%d) %s: Remaining: %.2f%%' % (count, k, v))
+        logger.info('  (%d) %s: Remaining: %.2f%%' % (count, "-111", v))
         count += 1
 
 

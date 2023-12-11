@@ -198,10 +198,13 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("VAEMade")
     print(f"Device is {device}")
+    
     vae = DisentangledVAE(f_dim=128, z_dim=16, step=128, factorised=True,device=device)
     #vae = DisentangledVAE(f_dim=256, z_dim=32, step=256, factorised=True,device=device)
-    test_f = torch.rand(1,256, device=device)
-    test_f = test_f.unsqueeze(1).expand(1, 8, 256)
+
+    x_dim=128 #256
+    test_f = torch.rand(1,x_dim, device=device)
+    test_f = test_f.unsqueeze(1).expand(1, 8, x_dim)
     print("Trainer Made")
 
     trainer = Trainer(vae, sprite, sprite_test, loader ,None, test_f, batch_size=25, epochs=500, learning_rate=0.002, device=device)

@@ -14,7 +14,7 @@ from models.model_base import ModelBase
 from main_prune_non_imagenet import *
 import copy
 import torch.autograd as autograd
-
+import random
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -112,7 +112,52 @@ def grasp_batched(net, ratio, train_loader, device,
     print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks.values()])))
 
     return keep_masks
-         
+
+def random_pruning(net, ratio):
+    eps = 1e-10
+    keep_ratio = 1-ratio
+    old_net = net
+    
+    net = copy.deepcopy(net)
+    net.to(DEVICE)
+    net.train()
+
+    net.zero_grad()
+    
+    weights = []
+    
+    for p in net.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
+        weights.append(p)
+    
+    net.to(DEVICE)
+    # targets_one = [] => Generative, no target
+
+    grads = dict()
+    old_modules = list(old_net.parameters())
+    for idx, p in enumerate(net.parameters()):
+        
+        grads[old_modules[idx]] = -p.data * 1  # -theta_q Hg
+    # Gather all scores in a single vector and normalise
+    # all_scores = torch.cat([torch.flatten(x) for x in grads.values()])
+    # norm_factor = torch.abs(torch.sum(all_scores)) + eps
+    # print("** norm factor:", norm_factor)
+    # all_scores.div_(norm_factor)
+
+    # num_params_to_rm = int(len(all_scores) * (1-keep_ratio))
+    # threshold, _ = torch.topk(all_scores, num_params_to_rm, sorted=True)
+    # # import pdb; pdb.set_trace()
+    # acceptable_score = threshold[-1]
+    # print('** accept: ', acceptable_score)
+    keep_masks = dict()
+    for m, g in grads.items():
+        keep_masks[m] = (torch.rand_like(g) <= keep_ratio).float()
+
+    print(torch.sum(torch.cat([torch.flatten(x == 1) for x in keep_masks.values()])))
+
+    return keep_masks
+
 if __name__ == '__main__':
     config = init_config()
     logger, writer = init_logger(config)
@@ -165,7 +210,8 @@ if __name__ == '__main__':
         mb.model.apply(weights_init)
         print("=> Applying weight initialization(%s)." % config.get('init_method', 'kaiming'))
         print("Iteration of: %d/%d" % (iteration, num_iterations))
-        masks = grasp_batched(mb.model, ratio, loader, 'cuda')
+        masks = random_pruning(mb.model, ratio)
+        # masks = grasp_batched(mb.model, ratio, loader, 'cuda')
         iteration = 0
         print('=> Using GraSP')
         # ========== register mask ==================
@@ -193,19 +239,6 @@ if __name__ == '__main__':
         logger.info('  LR: %.5f, WD: %.5f, Epochs: %d' %
                     (learning_rates[iteration], weight_decays[iteration], training_epochs[iteration]))
 
-        # ========== finetuning =======================
-        # train_once(mb=mb,
-        #            net=mb.model,
-        #            trainloader=trainloader,
-        #            testloader=testloader,
-        #            writer=writer,
-        #            config=config,
-        #            ckpt_path=ckpt_path,
-        #            learning_rate=learning_rates[iteration],
-        #            weight_decay=weight_decays[iteration],
-        #            num_epochs=training_epochs[iteration],
-        #            iteration=iteration,
-        #            logger=logger)
     # TODO: Setup VAE Trainer
         trainer = Trainer(mb.model, sprite, sprite_test, loader, None, test_f, batch_size=25, epochs=30, learning_rate=0.002, device=device)
         trainer.train_model()
